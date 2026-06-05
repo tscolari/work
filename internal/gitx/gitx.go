@@ -194,7 +194,12 @@ func MergedBranches(dir, base string) ([]string, error) {
 	}
 	var branches []string
 	for _, line := range strings.Split(out, "\n") {
-		name := strings.TrimSpace(strings.TrimPrefix(line, "* "))
+		if len(line) < 3 {
+			continue
+		}
+		// git branch output has a fixed 2-char prefix: "  ", "* " (current),
+		// or "+ " (checked out in another worktree).
+		name := strings.TrimSpace(line[2:])
 		if name == "" || name == base {
 			continue
 		}
