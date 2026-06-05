@@ -5,11 +5,21 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
 	"github.com/tscolari/work/internal/cli"
 )
 
 func main() {
-	if err := cli.RunWork(os.Args[1:], os.Stderr); err != nil {
+	root := &cobra.Command{
+		Use:           "work",
+		Short:         "Manage git worktree-based feature workspaces",
+		SilenceErrors: true,
+		SilenceUsage:  true,
+	}
+
+	root.AddCommand(startCmd(), endCmd(), cleanupBranchesCmd())
+
+	if err := root.Execute(); err != nil {
 		var ce *cli.Error
 		if errors.As(err, &ce) {
 			fmt.Fprintln(os.Stderr, ce.Msg)
@@ -18,4 +28,50 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
+}
+
+func startCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "start TICKET/kebab-description",
+		Short: "Create a new feature workspace (branch + worktree + tmux session)",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cli.RunWork(args, cmd.ErrOrStderr())
+		},
+	}
+}
+
+func endCmd() *cobra.Command {
+	var force, dryRun bool
+
+	cmd := &cobra.Command{
+		Use:   "end",
+		Short: "Tear down the current feature workspace",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cli.RunWorkend(force, dryRun, cmd.OutOrStdout(), cmd.ErrOrStderr())
+		},
+	}
+
+	cmd.Flags().BoolVar(&force, "force", false, "skip the unmerged-commits check and delete the branch anyway")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print what would happen without doing anything")
+
+	return cmd
+}
+
+func cleanupBranchesCmd() *cobra.Command {
+	var yes bool
+
+	cmd := &cobra.Command{
+		Use:   "cleanup-branches",
+		Short: "Delete local branches already merged into the default branch",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cli.RunCleanupBranches(yes, cmd.InOrStdin(), cmd.OutOrStdout(), cmd.ErrOrStderr())
+		},
+	}
+
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip confirmation prompt")
+
+	return cmd
 }

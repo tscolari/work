@@ -160,6 +160,49 @@ func HasUnmergedCommits(dir, branch string) (bool, error) {
 	return strings.TrimSpace(out) != "0", nil
 }
 
+// DefaultBranch returns the name of the repository's default branch by
+// reading refs/remotes/origin/HEAD. Falls back to "main" or "master" if
+// that ref is absent.
+func DefaultBranch(dir string) (string, error) {
+	out, err := output(dir, "git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD")
+	if err == nil {
+		name := strings.TrimSpace(out)
+		// Strip the "origin/" prefix if present.
+		name = strings.TrimPrefix(name, "origin/")
+		if name != "" {
+			return name, nil
+		}
+	}
+	for _, candidate := range []string{"main", "master"} {
+		exists, err := BranchExists(dir, candidate)
+		if err != nil {
+			return "", err
+		}
+		if exists {
+			return candidate, nil
+		}
+	}
+	return "", fmt.Errorf("could not determine default branch")
+}
+
+// MergedBranches returns the names of local branches that are fully merged
+// into base (e.g. "main"), excluding base itself.
+func MergedBranches(dir, base string) ([]string, error) {
+	out, err := output(dir, "git", "branch", "--merged", base)
+	if err != nil {
+		return nil, err
+	}
+	var branches []string
+	for _, line := range strings.Split(out, "\n") {
+		name := strings.TrimSpace(strings.TrimPrefix(line, "* "))
+		if name == "" || name == base {
+			continue
+		}
+		branches = append(branches, name)
+	}
+	return branches, nil
+}
+
 func run(dir, name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	cmd.Dir = dir

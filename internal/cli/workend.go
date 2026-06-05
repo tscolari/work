@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -12,19 +11,8 @@ import (
 	"github.com/tscolari/work/internal/tmuxx"
 )
 
-// RunWorkend executes the `workend` command.
-func RunWorkend(args []string, stdout, stderr io.Writer) error {
-	fs := flag.NewFlagSet("workend", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	force := fs.Bool("force", false, "skip the unmerged-commits check and delete the branch anyway")
-	dryRun := fs.Bool("dry-run", false, "print what would happen without doing anything")
-	if err := fs.Parse(args); err != nil {
-		return userErr("%v", err)
-	}
-	if fs.NArg() != 0 {
-		return userErr("workend takes no positional arguments")
-	}
-
+// RunWorkend executes the `work end` command.
+func RunWorkend(force, dryRun bool, stdout, stderr io.Writer) error {
 	cfg, err := config.Load()
 	if err != nil {
 		return sysErr("load config: %v", err)
@@ -66,7 +54,7 @@ func RunWorkend(args []string, stdout, stderr io.Writer) error {
 		return userErr("branch %s is checked out at %s; remove that worktree first", branch, other)
 	}
 
-	if !*force {
+	if !force {
 		unmerged, err := gitx.HasUnmergedCommits(repoDir, branch)
 		if err != nil {
 			return sysErr("check unmerged commits: %v", err)
@@ -76,7 +64,7 @@ func RunWorkend(args []string, stdout, stderr io.Writer) error {
 		}
 	}
 
-	if *dryRun {
+	if dryRun {
 		fmt.Fprintf(stdout, "would kill tmux session: %s\n", name)
 		fmt.Fprintf(stdout, "would remove worktree:   %s\n", cwd)
 		fmt.Fprintf(stdout, "would delete branch:     %s\n", branch)

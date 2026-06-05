@@ -1,6 +1,6 @@
-# WORK / WORKEND
+# WORK
 
-These are 2 vibecoded helpers that I created for my day to day usage.
+A vibecoded helper I created for my day to day usage.
 
 ## The flow
 
@@ -20,9 +20,13 @@ With a quick tear down
 ## With the tool
 
 1. `cd ./codebase`
-2. `work TKT-1234/creating-api-mocks`
+2. `work start TKT-1234/creating-api-mocks`
 3. ... work
-4. `workend` (from the worktree dir)
+4. `work end` (from the worktree dir)
+
+Flags for `work end`:
+- `--force` — skip the unmerged-commits check
+- `--dry-run` — print what would happen without doing anything
 
 --
 
