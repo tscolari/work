@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/tscolari/work/internal/cli"
+	"github.com/tscolari/work/internal/config"
 )
 
 func main() {
@@ -17,7 +18,7 @@ func main() {
 		SilenceUsage:  true,
 	}
 
-	root.AddCommand(startCmd(), endCmd(), cleanupBranchesCmd())
+	root.AddCommand(startCmd(), endCmd(), cleanupBranchesCmd(), listCmd(), attachCmd())
 
 	if err := root.Execute(); err != nil {
 		var ce *cli.Error
@@ -72,6 +73,51 @@ func cleanupBranchesCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip confirmation prompt")
+
+	return cmd
+}
+
+func listCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List active workspaces and their tmux session status",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cli.RunList(cmd.OutOrStdout(), cmd.ErrOrStderr())
+		},
+	}
+}
+
+func attachCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "attach <name>",
+		Short: "Reconnect to a workspace, creating a tmux session if needed",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cli.RunAttach(args[0], cmd.ErrOrStderr())
+		},
+	}
+
+	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		if len(args) != 0 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		cfg, err := config.Load()
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+		entries, err := os.ReadDir(cfg.WorktreeBase)
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		var names []string
+		for _, e := range entries {
+			if e.IsDir() {
+				names = append(names, e.Name())
+			}
+		}
+		return names, cobra.ShellCompDirectiveNoFileComp
+	}
 
 	return cmd
 }

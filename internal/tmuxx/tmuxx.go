@@ -45,6 +45,21 @@ func NewSessionAttached(name, cwd string) error {
 	return nil
 }
 
+// AttachSession replaces the current process with `tmux attach-session`.
+// Use when a session already exists and we are outside tmux.
+// On success, this function does not return.
+func AttachSession(name string) error {
+	bin, err := exec.LookPath("tmux")
+	if err != nil {
+		return fmt.Errorf("locate tmux: %w", err)
+	}
+	argv := []string{"tmux", "attach-session", "-t", name}
+	if err := syscall.Exec(bin, argv, os.Environ()); err != nil {
+		return fmt.Errorf("exec tmux: %w", err)
+	}
+	return nil
+}
+
 func NewSessionDetached(name, cwd string) error {
 	return run("tmux", "new-session", "-d", "-s", name, "-c", cwd)
 }
