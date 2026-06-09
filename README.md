@@ -28,6 +28,24 @@ Flags for `work end`:
 - `--force` — skip the unmerged-commits check
 - `--dry-run` — print what would happen without doing anything
 
+### After a reboot
+
+tmux sessions don't survive a reboot, but the worktrees and branches do.
+
+```
+work list                          # see all workspaces and whether a session exists
+work attach TKT-1234-creating-api-mocks  # reconnect (creates a new session if needed)
+```
+
+Tab completion for workspace names: add `eval "$(work completion zsh)"` (or `bash`) to your shell rc.
+
+### Cleaning up
+
+```
+work cleanup-branches              # delete local branches already merged into main
+work cleanup-branches --yes        # skip the confirmation prompt
+```
+
 --
 
 ## Configuration
