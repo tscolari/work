@@ -71,6 +71,20 @@ func RunWorkend(force, dryRun bool, stdout, stderr io.Writer) error {
 		return nil
 	}
 
+	// Remove the worktree and branch before touching tmux. When workend is run
+	// from inside the session it's about to kill, killing the session sends
+	// SIGHUP to this process; doing the git cleanup first guarantees it
+	// completes regardless.
+	if err := gitx.WorktreeRemove(repoDir, cwd); err != nil {
+		return sysErr("remove worktree: %v", err)
+	}
+	if err := gitx.BranchDelete(repoDir, branch); err != nil {
+		return sysErr("delete branch: %v", err)
+	}
+
+	// Kill the tmux session last. This may terminate the current process if
+	// workend was launched from within that session, so nothing important
+	// should follow it.
 	if tmuxx.Installed() {
 		has, err := tmuxx.HasSession(name)
 		if err != nil {
@@ -81,13 +95,6 @@ func RunWorkend(force, dryRun bool, stdout, stderr io.Writer) error {
 				fmt.Fprintf(stderr, "warning: kill tmux session %s: %v\n", name, err)
 			}
 		}
-	}
-
-	if err := gitx.WorktreeRemove(repoDir, cwd); err != nil {
-		return sysErr("remove worktree: %v", err)
-	}
-	if err := gitx.BranchDelete(repoDir, branch); err != nil {
-		return sysErr("delete branch: %v", err)
 	}
 
 	return nil
